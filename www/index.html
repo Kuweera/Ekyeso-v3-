@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Ekyeso — Busoga Board Game</title>
+<!-- Ekyeso Professional V4: safer Advanced AI, configurable token speed, clearer Human/Computer labels, enhanced victory fanfare -->
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root { --move-duration: .82s; --capture-duration: 1.35s; }
   html, body {
     margin: 0; padding: 0; height: 100%;
     background: radial-gradient(circle at 50% 0%, #2b1b10 0%, #120d08 55%, #0a0705 100%); color: #f0e6d8;
@@ -41,7 +43,7 @@
   .mk-ai { fill: none; stroke: #e8b96a; stroke-width: 2.5; stroke-dasharray: 5 4; }
   @keyframes mkPulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 
-  .tok { pointer-events: none; transition: transform .82s cubic-bezier(.22,.72,.22,1); will-change: transform; }
+  .tok { pointer-events: none; transition: transform var(--move-duration) cubic-bezier(.22,.72,.22,1); will-change: transform; }
   .tok .inner { transform-origin: 0 0; }
   .body { stroke-width: 2; }
   .body.A { fill: url(#gA); stroke: #000; }
@@ -63,8 +65,8 @@
   @keyframes crownPop { 0% { transform: scale(0) translateY(-24px); } 60% { transform: scale(1.5); } 100% { transform: scale(1); } }
 
   .tok.dying .inner { animation: dieAnim .45s ease-in forwards; }
-  .tok.captured-fly { z-index:50; transition: transform 1.35s cubic-bezier(.18,.72,.22,1), opacity 1.35s ease; pointer-events:none; }
-  .tok.captured-fly .inner { animation: capturedSpin 1.35s cubic-bezier(.2,.7,.25,1) forwards; }
+  .tok.captured-fly { z-index:50; transition: transform var(--capture-duration) cubic-bezier(.18,.72,.22,1), opacity var(--capture-duration) ease; pointer-events:none; }
+  .tok.captured-fly .inner { animation: capturedSpin var(--capture-duration) cubic-bezier(.2,.7,.25,1) forwards; }
   @keyframes capturedSpin { 0%{transform:scale(1) rotate(0);opacity:1} 45%{transform:scale(.96) rotate(120deg);opacity:1} 78%{transform:scale(.78) rotate(250deg);opacity:.9} 100%{transform:scale(.58) rotate(360deg);opacity:.45} }
 
   @keyframes dieAnim { 0% { transform: scale(1); opacity: 1; } 35% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(0) rotate(90deg); opacity: 0; } }
@@ -150,18 +152,19 @@
   .guide-contact { text-align:center; }
   .guide-contact a { color:#f0c879; text-decoration:none; font-weight:800; }
   .guide-close { width:min(94vw,390px); margin:2px auto 0; border:0; border-radius:11px; padding:12px; background:#e8b96a; color:#1a1410; font-weight:900; font-size:14px; }
-  #tokens-screen { position: fixed; inset: 0; background: rgba(18,13,8,0.98); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; z-index: 30; }
+  #tokens-screen { position: fixed; inset: 0; background: rgba(18,13,8,0.98); display: none; align-items: center; justify-content: flex-start; flex-direction: column; gap: 10px; z-index: 30; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 18px 0 28px; }
   #tokens-screen.show { display: flex; }
   #tokens-screen h2 { color: #e8b96a; letter-spacing: 4px; margin: 0 0 4px; font-size: 22px; }
   .tsec { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 8px 10px; width: 92%; max-width: 380px; }
   .tlabel { font-size: 12px; font-weight: 800; letter-spacing: 3px; margin-bottom: 4px; opacity: .9; }
   .trow { display: flex; gap: 6px; justify-content: space-between; margin: 5px 0; }
+  #shapes-A, #shapes-B { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; justify-items: center; }
   .opt { background: #2a1e14; border: 2px solid transparent; border-radius: 10px; padding: 3px; }
   .opt.on { border-color: #e8b96a; background: #3a2a1c; }
   .sw { width: 38px; height: 38px; border-radius: 50%; border: 3px solid transparent; }
   .sw.on { border-color: #fff; }
   .sw.dis { opacity: .22; }
-  #tokens-screen button.ok { width: 200px; background: #e8b96a; color: #1a1410; border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 800; margin-top: 6px; }
+  #tokens-screen button.ok { width: 200px; min-height: 46px; flex: 0 0 auto; background: #e8b96a; color: #1a1410; border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 800; margin: 4px 0 8px; }
   .ropt { display: block; width: 100%; text-align: left; background: #2a1e14; border: 2px solid transparent; border-radius: 8px; padding: 8px 10px; margin: 4px 0; font-size: 12.5px; color: #f0e6d8; }
   .ropt.on { border-color: #e8b96a; background: #3a2a1c; }
   .ropt b { color: #e8b96a; }
@@ -194,7 +197,8 @@
     <button id="resume-btn" class="resume-card" onclick="resumeGame()" style="display:none">▶ RESUME SAVED GAME</button>
   </div>
   <div id="ai-menu" class="subpanel" style="display:none">
-    <div class="panel-title">🤖 CHOOSE COMPUTER LEVEL</div>
+    <div class="panel-title">🤖 COMPUTER = PLAYER B · HUMAN = PLAYER A</div>
+    <div style="text-align:center;font-size:10px;opacity:.55;margin-bottom:4px">Player A is you. Player B is the computer.</div>
     <button onclick="startGame('ai','easy')">🌱 BEGINNER</button>
     <button onclick="startGame('ai','moderate')">⚔️ NORMAL</button>
     <button onclick="startGame('ai','hard')">🔥 ADVANCED</button>
@@ -221,6 +225,8 @@
   <div class="guide-card"><h3>🟤 MOVING A TOKEN</h3><ul><li>A normal token moves one connected step to an empty intersection.</li><li>Movement follows the lines drawn on the board.</li><li>After a normal token reaches the opponent's first/final line and settles there at the end of its turn, it becomes a King.</li></ul></div>
   <div class="guide-card"><h3>🍽️ EATING / CAPTURING</h3><ul><li>A normal token eats by jumping over an adjacent opponent token along a connected line and landing in an empty position beyond it.</li><li>If a capture is mandatory, the player must make a capture.</li><li>After the first capture, another available capture may be continued, but the player can choose to finish the turn.</li><li>An eaten token leaves the board and is placed on the captor's side.</li></ul></div>
   <div class="guide-card"><h3>👑 KINGS</h3><ul><li>A King can move along the real board lines in any allowed direction.</li><li>A King may resist eating a normal token, but it cannot resist a legal capture of another King.</li><li>Choose the King long-distance rule in Settings: <b>After 1 King capture OR 3 King moves</b>, or <b>Immediately on crowning</b>.</li><li>Long-distance movement still follows the actual board lines; it is not teleportation.</li></ul></div>
+  <div class="guide-card"><h3>🤖 COMPUTER MODE</h3><p>In Human vs Computer, <b>PLAYER A = HUMAN</b> and <b>PLAYER B = COMPUTER</b>. The board and turn indicator show the role clearly.</p></div>
+  <div class="guide-card"><h3>⚙️ MOVEMENT SPEED</h3><p>Token movement and capture animation speed can be changed at any time in Settings.</p></div>
   <div class="guide-card"><h3>⚠️ IMPORTANT</h3><p>If a player refuses a mandatory capture, the applicable token is forfeited according to the game rules.</p></div>
   <div class="guide-card guide-contact"><h3>📩 CONTACT THE DEVELOPER</h3><p>For improvements, suggestions or bug reports:</p><p>✉️ <a href="mailto:kuweeraa@gmail.com">kuweeraa@gmail.com</a></p><p>💬 WhatsApp: <b>@arnestk</b></p></div>
   <button class="guide-close" onclick="closeGuide()">DONE</button>
@@ -233,6 +239,13 @@
   <div class="tsec">
     <div class="tlabel">👑 KING ENERGY RULE</div>
     <div id="king-rule-opts"></div>
+  </div>
+  <div class="tsec">
+    <div class="tlabel">🎞️ TOKEN MOVEMENT SPEED</div>
+    <div style="display:flex;align-items:center;gap:9px;font-size:11px;opacity:.8">
+      <span>🐢</span><input id="speed-range" type="range" min="50" max="200" step="10" value="100" style="flex:1;accent-color:#e8b96a" oninput="pickSpeed(this.value)"><span>⚡</span>
+    </div>
+    <div id="speed-value" style="text-align:center;margin-top:5px;color:#e8b96a;font-weight:800">Normal · 100%</div>
   </div>
   <div class="tsec" style="text-align:center"><div class="tlabel">📩 DEVELOPER</div><div style="font-size:11px;line-height:1.6;opacity:.8">Email: <b>kuweeraa@gmail.com</b><br>WhatsApp: <b>@arnestk</b></div></div>
   <button class="ok" onclick="closeTokens()">✔ OK</button>
@@ -623,7 +636,7 @@ function performSimpleMove(from, to) {
     }
   }
   const doomed = huffSquare !== null ? board[huffSquare] : null;
-  if (!doomed) { setTimeout(() => endTurn(), 850); return; }
+  if (!doomed) { setTimeout(() => endTurn(), Math.round(85000 / tokenSpeed)); return; }
 
   // Penalty: mark the token in red first so the player can see exactly what is about to happen.
   busy = true;
@@ -690,7 +703,7 @@ function performCapture(from, to) {
     } else {
       endTurn();
     }
-  }, 1400);
+  }, Math.round(140000 / tokenSpeed));
 }
 
 // ---------- INTERACTION ----------
@@ -741,7 +754,7 @@ function onNodeClick(id) {
 }
 
 // ---------- TOKEN STYLES, SETTINGS, SOUND ----------
-const SHAPES = ['pawn', 'ring', 'pin', 'gem', 'ghost'];
+const SHAPES = ['pawn', 'ring', 'pin', 'gem', 'ghost', 'agent', 'rocket', 'cone'];
 const COLORS = ['black', 'blue', 'red', 'green', 'yellow'];
 const COLOR_EMOJI = { black: '⚫', blue: '🔵', red: '🔴', green: '🟢', yellow: '🟡' };
 const PALETTE = {
@@ -762,6 +775,7 @@ function kingHasEnergy(t) {
   return !!t.hasCaptured || t.kingMoves >= 3;
 }
 let soundOn = true;
+let tokenSpeed = 100; // 50% slower to 200% faster; persisted in Settings
 let quietRender = false;   // suppress crown pop/sound when tokens are only being redrawn
 
 function buildDefs() {
@@ -774,7 +788,7 @@ function buildDefs() {
   document.getElementById('global-defs').innerHTML = h;
 }
 
-// Five token shapes (from the Ludo-style set): pawn, ring, map pin, gem, ghost. All fit inside radius ~26.
+// Eight token shapes (Ludo-style set): pawn, ring, map pin, gem, ghost, agent, rocket, cone. All fit inside radius ~26.
 function shapeMarkup(shape, ck) {
   const c = PALETTE[ck], f = `url(#grad-${ck})`, st = c.stroke;
   switch (shape) {
@@ -786,6 +800,12 @@ function shapeMarkup(shape, ck) {
       return `<polygon points="0,-25 22,-7 14,22 -14,22 -22,-7" fill="${f}" stroke="${st}" stroke-width="2" stroke-linejoin="round"/><polygon points="0,-25 22,-7 0,2 -22,-7" fill="#fff" opacity=".28"/><polygon points="-22,-7 0,2 -14,22" fill="#000" opacity=".18"/><polygon points="22,-7 0,2 14,22" fill="#000" opacity=".08"/>`;
     case 'ghost':
       return `<path d="M-20 22 L-20 -4 A20 20 0 0 1 20 -4 L20 22 L13 16 L6.5 22 L0 16 L-6.5 22 L-13 16 Z" fill="${f}" stroke="${st}" stroke-width="2" stroke-linejoin="round"/><ellipse cx="-7" cy="-5" rx="5" ry="6.5" fill="#fff"/><ellipse cx="7" cy="-5" rx="5" ry="6.5" fill="#fff"/><circle cx="-6" cy="-4" r="2.6" fill="#111"/><circle cx="8" cy="-4" r="2.6" fill="#111"/>`;
+    case 'cone':
+      return `<ellipse cx="0" cy="19" rx="22" ry="7" fill="${f}" stroke="${st}" stroke-width="2"/><path d="M-4 -24 Q0 -28 4 -24 L15 17 L-15 17 Z" fill="${f}" stroke="${st}" stroke-width="2" stroke-linejoin="round"/><polygon points="-7.5,-12 7.5,-12 9.4,-5 -9.4,-5" fill="#fff" opacity=".93"/><polygon points="-11.2,2 11.2,2 13.1,9 -13.1,9" fill="#fff" opacity=".93"/><path d="M-3 -21 L-11 14" stroke="#fff" stroke-width="2" opacity=".25" stroke-linecap="round"/>`;
+    case 'rocket':
+      return `<ellipse cx="0" cy="20" rx="21" ry="7" fill="${f}" stroke="${st}" stroke-width="2"/><g transform="translate(-3,17) rotate(32)"><rect x="-7" y="-4" width="14" height="6" rx="2" fill="#2b2b2f" stroke="#111" stroke-width="1.2"/><path d="M-9 -3 L-9 -22 A9 9 0 0 1 9 -22 L9 -3 Z" fill="${f}" stroke="${st}" stroke-width="2" stroke-linejoin="round"/><path d="M-9 -22 A9 9 0 0 1 9 -22 Z" fill="url(#grad-white)" stroke="#8a929a" stroke-width="1.6" stroke-linejoin="round"/><circle cx="0" cy="-15" r="4" fill="#1d2430" stroke="#fff" stroke-width="1.8"/><circle cx="-1.2" cy="-16.2" r="1.2" fill="#fff" opacity=".8"/></g>`;
+    case 'agent':
+      return `<ellipse cx="0" cy="21" rx="21" ry="6" fill="${f}" stroke="${st}" stroke-width="2"/><path d="M-15 21 Q-15 7 -8 5 L8 5 Q15 7 15 21 Z" fill="#1b1b20" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/><polygon points="-4.5,5 4.5,5 0,14" fill="#fff"/><polygon points="-1.6,7 1.6,7 1.2,13 -1.2,13" fill="${f}" stroke="${st}" stroke-width=".8"/><ellipse cx="0" cy="5" rx="10" ry="3" fill="${f}" stroke="${st}" stroke-width="1.6"/><circle cx="0" cy="-3.5" r="9" fill="#f3cfa8" stroke="#8a5a35" stroke-width="1.6"/><rect x="-7.5" y="-7" width="15" height="5.5" rx="2.4" fill="#0e0e12"/><rect x="-6" y="-6.2" width="5" height="1.3" rx=".6" fill="#fff" opacity=".35"/><path d="M-3 3 Q0 5 3 3" fill="none" stroke="#8a5a35" stroke-width="1.2" stroke-linecap="round"/><ellipse cx="0" cy="-11" rx="16" ry="4.2" fill="${f}" stroke="${st}" stroke-width="2"/><path d="M-8.5 -11 Q-8.5 -23.5 0 -23.5 Q8.5 -23.5 8.5 -11 Z" fill="${f}" stroke="${st}" stroke-width="2" stroke-linejoin="round"/><path d="M-8.5 -13 L8.5 -13 L8.5 -10.5 L-8.5 -10.5 Z" fill="#111"/>`;
     default: // pawn
       return `<ellipse cx="0" cy="19" rx="20" ry="7" fill="${f}" stroke="${st}" stroke-width="2"/><path d="M-12 19 Q-8 3 -5 -4 L5 -4 Q8 3 12 19 Z" fill="${f}" stroke="${st}" stroke-width="2"/><ellipse cx="0" cy="-4" rx="10" ry="3.5" fill="${f}" stroke="${st}" stroke-width="2"/><circle cx="0" cy="-14" r="10" fill="${f}" stroke="${st}" stroke-width="2"/><ellipse cx="-3.5" cy="-17.5" rx="3.5" ry="2.5" fill="#fff" opacity=".4"/>`;
   }
@@ -795,7 +815,7 @@ function previewSvg(shape, ck, size, cls) {
 }
 
 function saveSettings() {
-  try { localStorage.setItem('ekyeso.settings', JSON.stringify({ tokenStyle, soundOn, kingRule })); } catch (e) {}
+  try { localStorage.setItem('ekyeso.settings', JSON.stringify({ tokenStyle, soundOn, kingRule, tokenSpeed })); } catch (e) {}
 }
 function loadSettings() {
   try {
@@ -809,6 +829,8 @@ function loadSettings() {
       if (typeof v.soundOn === 'boolean') soundOn = v.soundOn;
       if (v.kingRule === 'immediate') kingRule = 'immediate';
       else if (['earned', 'after3', 'afterCapture'].includes(v.kingRule)) kingRule = 'earned';
+      if (Number.isFinite(Number(v.tokenSpeed))) tokenSpeed = Math.max(50, Math.min(200, Number(v.tokenSpeed)));
+      applyTokenSpeed();
     }
   } catch (e) {}
   updateSoundBtn();
@@ -830,6 +852,25 @@ function renderKingRulePicker() {
   ).join('');
 }
 function pickKingRule(v) { kingRule = v; saveSettings(); renderKingRulePicker(); }
+
+function applyTokenSpeed() {
+  const root = document.documentElement;
+  const factor = Math.max(.5, Math.min(2, tokenSpeed / 100));
+  root.style.setProperty('--move-duration', (820 / factor) + 'ms');
+  root.style.setProperty('--capture-duration', (1350 / factor) + 'ms');
+  const r = document.getElementById('speed-range');
+  const out = document.getElementById('speed-value');
+  if (r) r.value = tokenSpeed;
+  if (out) {
+    const label = tokenSpeed < 90 ? 'Slower' : tokenSpeed > 110 ? 'Faster' : 'Normal';
+    out.textContent = `${label} · ${tokenSpeed}%`;
+  }
+}
+function pickSpeed(v) {
+  tokenSpeed = Math.max(50, Math.min(200, Number(v) || 100));
+  saveSettings();
+  applyTokenSpeed();
+}
 
 function renderTokenPicker() {
   ['A', 'B'].forEach(p => {
@@ -854,7 +895,7 @@ function pickColor(p, ck) {
   if (tokenStyle[other].color === ck) return;   // the two players must be easy to tell apart
   tokenStyle[p].color = ck; saveSettings(); applyStyleNow(); renderTokenPicker();
 }
-function openTokens() { renderTokenPicker(); renderKingRulePicker(); document.getElementById('tokens-screen').classList.add('show'); }
+function openTokens() { renderTokenPicker(); renderKingRulePicker(); applyTokenSpeed(); document.getElementById('tokens-screen').classList.add('show'); }
 function closeTokens() { document.getElementById('tokens-screen').classList.remove('show'); }
 
 // ----- Sound (synthesized, no files, works offline) -----
@@ -894,12 +935,23 @@ function noise(c, dur, vol, delay) {
 const SFX = {
   select:  c => tone(c, 620, 0.07, 'sine', 0.12, 0, 900),
   move:    c => { tone(c, 230, 0.13, 'triangle', 0.3, 0, 120); noise(c, 0.05, 0.06, 0); },
-  capture: c => { noise(c, 0.2, 0.22, 0); tone(c, 320, 0.28, 'sawtooth', 0.2, 0, 70); },
+  capture: c => {
+    // Classic board-game capture: a short wooden clack/thump rather than a harsh electronic buzz.
+    tone(c, 105, 0.16, 'triangle', 0.20, 0, 72);
+    noise(c, 0.055, 0.10, 0.015);
+    tone(c, 540, 0.075, 'triangle', 0.10, 0.025, 430);
+  },
   chain:   c => { tone(c, 660, 0.1, 'triangle', 0.18, 0); tone(c, 990, 0.16, 'triangle', 0.18, 0.09); },
   king:    c => { [523, 659, 784, 1047].forEach((f, i) => tone(c, f, 0.22, 'triangle', 0.22, i * 0.1)); },
   warn:    c => { tone(c, 260, 0.2, 'square', 0.16, 0); tone(c, 260, 0.2, 'square', 0.16, 0.3); tone(c, 340, 0.3, 'square', 0.14, 0.6); },
   forfeit: c => { noise(c, 0.25, 0.2, 0); tone(c, 420, 0.5, 'sawtooth', 0.22, 0, 60); },
-  win:     c => { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(c, f, 0.28, 'triangle', 0.22, i * 0.13)); },
+  win:     c => {
+    // Short offline victory fanfare: bright chord + rising melody + final chord.
+    [523, 659, 784].forEach((f, i) => tone(c, f, 0.5, 'triangle', 0.16, i * 0.04));
+    [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(c, f, 0.25, 'triangle', 0.23, 0.12 + i * 0.12));
+    [784, 1047, 1319].forEach((f, i) => tone(c, f, 0.65, 'sine', 0.12, 0.9 + i * 0.04));
+    noise(c, 0.18, 0.045, 0.82);
+  },
   lose:    c => { [392, 330, 262, 196].forEach((f, i) => tone(c, f, 0.4, 'sine', 0.22, i * 0.25)); }
 };
 function sfx(name) {
@@ -980,7 +1032,7 @@ function animateCapturedToken(rec, captor) {
     g.style.opacity = '0.35';
   });
   spawnFx('✦', rec.x, rec.y - 10, 'burst');
-  setTimeout(() => g.remove(), 850);
+  setTimeout(() => g.remove(), Math.round(1350 * 100 / tokenSpeed) + 100);
 }
 
 function syncTokens() {
@@ -1057,12 +1109,12 @@ function render() {
   syncTokens();
 
   const indicator = document.getElementById('turn-indicator');
-  const tag = (mode === 'ai' && currentPlayer === aiPlayer) ? ' (AI)' : '';
-  indicator.textContent = `${COLOR_EMOJI[tokenStyle[currentPlayer].color]} PLAYER ${currentPlayer}${tag}'s TURN`;
+  const role = mode === 'ai' ? (currentPlayer === aiPlayer ? 'COMPUTER' : 'HUMAN') : `PLAYER ${currentPlayer}`;
+  indicator.textContent = `${COLOR_EMOJI[tokenStyle[currentPlayer].color]} ${role} · PLAYER ${currentPlayer}'s TURN`;
   indicator.className = currentPlayer === 'A' ? 'playerA' : 'playerB';
 
-  document.getElementById('lbl-A').textContent = `${COLOR_EMOJI[tokenStyle.A.color]} PLAYER A`;
-  document.getElementById('lbl-B').textContent = `${COLOR_EMOJI[tokenStyle.B.color]} PLAYER B`;
+  document.getElementById('lbl-A').textContent = `${COLOR_EMOJI[tokenStyle.A.color]} PLAYER A${mode === 'ai' && aiPlayer !== 'A' ? ' · HUMAN' : ''}`;
+  document.getElementById('lbl-B').textContent = `${COLOR_EMOJI[tokenStyle.B.color]} PLAYER B${mode === 'ai' && aiPlayer === 'B' ? ' · COMPUTER' : ''}`;
   document.getElementById('tray-A').classList.toggle('active', currentPlayer === 'A');
   document.getElementById('tray-B').classList.toggle('active', currentPlayer === 'B');
   renderTray('cap-A', Math.max(0, capturedByA - pendingCapturedA), 'B'); // blue tokens Player A has eaten
@@ -1086,7 +1138,7 @@ const TIMEOUT = { timeout: true };
 const AI_CONFIG = {
   easy:     { depth: 1, timeMs: 0,    randomLegal: 0.30, topN: 0, topPickChance: 0,   w: { normal: 100, king: 200, adv: 0, center: 0 } },
   moderate: { depth: 3, timeMs: 1000, randomLegal: 0,    topN: 3, topPickChance: 0.10, w: { normal: 100, king: 300, adv: 4, center: 3 } },
-  hard:     { depth: 8, timeMs: 1500, randomLegal: 0,    topN: 0, topPickChance: 0,   w: { normal: 100, king: 320, adv: 6, center: 4 } }
+  hard:     { depth: 6, timeMs: 850, randomLegal: 0,    topN: 0, topPickChance: 0,   w: { normal: 100, king: 320, adv: 6, center: 4 } }
 };
 
 function cloneBoard(b) {
@@ -1113,7 +1165,7 @@ function enumerateTurns(player, startBoard) {
     const firstCaps = getAllCaptures(player);
     for (const m of firstCaps) {
       enumChain(cloneBoard(startBoard), m, 0, [], results);
-      if (results.length > 400) break;
+      if (results.length > 250) break;
     }
     if (!mandatory) {
       for (let id = 1; id <= 25; id++) {
@@ -1150,10 +1202,10 @@ function enumChain(b, m, captured, steps, results) {
   board = fin;
   promoteIfNeeded(m.to);              // crowned only if the turn ends on the final line
   results.push({ board: fin, captured: cap, steps: newSteps });
-  if (results.length > 400) return;
+  if (results.length > 250) return;
   for (const f of further) {
     enumChain(cloneBoard(b), f, cap, newSteps, results);
-    if (results.length > 400) return;
+    if (results.length > 250) return;
   }
 }
 
@@ -1232,10 +1284,22 @@ function aiTakeTurn(gid) {
   if (gid !== gameId || gameOver || mode !== 'ai' || currentPlayer !== aiPlayer) return;
   const real = board;
   let choice = null;
-  try { choice = chooseAiTurn(aiPlayer, aiLevel); } finally { board = real; }
+  try {
+    choice = chooseAiTurn(aiPlayer, aiLevel);
+  } catch (err) {
+    // Never cancel/freeze an Advanced game because a deep search exhausts the phone.
+    // Fall back to a legal turn from the same rules engine.
+    board = real;
+    try {
+      const safeTurns = enumerateTurns(aiPlayer, board);
+      choice = safeTurns.length ? safeTurns[0] : null;
+    } catch (fallbackErr) {
+      choice = null;
+    }
+  } finally { board = real; }
   if (!choice) {
     lastAiSteps = [];
-    setStatus(`Player ${aiPlayer} has no legal move and passes.`, true);
+    setStatus('🤖 Computer is continuing…', false);
     setTimeout(() => { if (gid === gameId) endTurn(); }, 1200);
     return;
   }
@@ -1270,7 +1334,7 @@ function aiTakeTurn(gid) {
         render();
       }
       next();
-    }, st.over !== null ? 1450 : 900);
+    }, st.over !== null ? Math.round(145000 / tokenSpeed) : Math.round(90000 / tokenSpeed));
   };
   next();
 }
@@ -1326,6 +1390,7 @@ function startGame(m, lvl) {
 }
 
 loadSettings();
+applyTokenSpeed();
 board = newBoard();
 initBoard();
 startTurn();
