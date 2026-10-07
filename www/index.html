@@ -78,6 +78,9 @@
 
   #status { min-height: 20px; text-align: center; font-size: 13px; padding: 2px 8px; flex-shrink: 0; opacity: .9; }
   #status.warn { color: #ff6b6b; font-weight: 700; opacity: 1; }
+  #draw-note { display:none; text-align:center; font-size:12px; font-weight:800; letter-spacing:.5px; color:#e8b96a; background:rgba(232,185,106,.1); border:1px solid rgba(232,185,106,.35); border-radius:999px; margin:0 auto 4px; padding:3px 12px; flex-shrink:0; }
+  #draw-note.show { display:block; }
+  #draw-note.urgent { color:#ff9d6b; border-color:rgba(255,157,107,.55); background:rgba(255,120,60,.12); }
   #action-bar { display: flex; justify-content: center; gap: 10px; padding: 4px 0 10px; min-height: 46px; flex-shrink: 0; }
   #action-bar button { background: #e8b96a; color: #1a1410; border: none; border-radius: 10px; padding: 10px 22px; font-size: 15px; font-weight: 800; }
 
@@ -132,7 +135,7 @@
   .stats-sub { font-size:10px; letter-spacing:2px; opacity:.55; margin-bottom:16px; }
   .stats-card { width:min(94vw,390px); background:linear-gradient(145deg,#34200f,#1b1009); border:1px solid rgba(226,182,111,.22); border-radius:16px; padding:14px; margin-bottom:10px; box-shadow:0 7px 20px rgba(0,0,0,.3); }
   .stats-card h3 { margin:0 0 10px; font-size:12px; letter-spacing:2px; color:#e8b96a; }
-  .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; text-align:center; }
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; text-align:center; }
   .stat-num { font-size:23px; font-weight:900; }
   .stat-label { font-size:9px; opacity:.5; letter-spacing:1px; }
   .stat-good { color:#8fdf9a; } .stat-bad { color:#ff9a83; }
@@ -182,6 +185,7 @@
   <div id="board-wrap"><svg id="board-svg" preserveAspectRatio="xMidYMid meet"></svg></div>
   <div class="tray" id="tray-A"><span class="pname" id="lbl-A">⚫ PLAYER A</span><span id="cap-A"></span></div>
   <div id="status"></div>
+  <div id="draw-note"></div>
   <div id="action-bar"></div>
 </div>
 
@@ -210,8 +214,8 @@
 <div id="stats-screen">
   <div class="stats-title">MY RECORD</div>
   <div class="stats-sub">YOUR EKYESO MATCH HISTORY</div>
-  <div class="stats-card"><h3>👥 HUMAN VS HUMAN</h3><div class="stat-grid"><div><div class="stat-num" id="hvh-games">0</div><div class="stat-label">GAMES</div></div><div><div class="stat-num stat-good" id="hvh-a-wins">0</div><div class="stat-label">PLAYER A WINS</div></div><div><div class="stat-num stat-bad" id="hvh-b-wins">0</div><div class="stat-label">PLAYER B WINS</div></div></div></div>
-  <div class="stats-card"><h3>🤖 HUMAN VS COMPUTER</h3><div class="stat-grid"><div><div class="stat-num" id="ai-games">0</div><div class="stat-label">GAMES</div></div><div><div class="stat-num stat-good" id="ai-wins">0</div><div class="stat-label">WINS</div></div><div><div class="stat-num stat-bad" id="ai-losses">0</div><div class="stat-label">LOSSES</div></div></div></div>
+  <div class="stats-card"><h3>👥 HUMAN VS HUMAN</h3><div class="stat-grid"><div><div class="stat-num" id="hvh-games">0</div><div class="stat-label">GAMES</div></div><div><div class="stat-num stat-good" id="hvh-a-wins">0</div><div class="stat-label">PLAYER A WINS</div></div><div><div class="stat-num stat-bad" id="hvh-b-wins">0</div><div class="stat-label">PLAYER B WINS</div></div><div><div class="stat-num" id="hvh-draws">0</div><div class="stat-label">DRAWS</div></div></div></div>
+  <div class="stats-card"><h3>🤖 HUMAN VS COMPUTER</h3><div class="stat-grid"><div><div class="stat-num" id="ai-games">0</div><div class="stat-label">GAMES</div></div><div><div class="stat-num stat-good" id="ai-wins">0</div><div class="stat-label">WINS</div></div><div><div class="stat-num stat-bad" id="ai-losses">0</div><div class="stat-label">LOSSES</div></div><div><div class="stat-num" id="ai-draws">0</div><div class="stat-label">DRAWS</div></div></div></div>
   <div class="stats-card"><h3>AI LEVEL RECORD</h3><div class="history-row"><span>🌱 Beginner</span><b id="easy-rec">0 W / 0 L</b></div><div class="history-row"><span>⚔️ Normal</span><b id="moderate-rec">0 W / 0 L</b></div><div class="history-row"><span>🔥 Advanced</span><b id="hard-rec">0 W / 0 L</b></div></div>
   <div class="stats-card"><h3>RECENT GAMES</h3><div id="history-list"><div style="opacity:.45;text-align:center;font-size:11px">No completed games yet.</div></div></div>
   <button class="stats-close" onclick="closeStats()">DONE</button>
@@ -224,7 +228,7 @@
   <div class="guide-card"><h3>🎯 THE AIM</h3><p>Ekyeso is a two-player Busoga board game. Capture the opponent's playable tokens until the opponent has no playable tokens left.</p></div>
   <div class="guide-card"><h3>🟤 MOVING A TOKEN</h3><ul><li>A normal token moves one connected step to an empty intersection.</li><li>Movement follows the lines drawn on the board.</li><li>After a normal token reaches the opponent's first/final line and settles there at the end of its turn, it becomes a King.</li></ul></div>
   <div class="guide-card"><h3>🍽️ EATING / CAPTURING</h3><ul><li>A normal token eats by jumping over an adjacent opponent token along a connected line and landing in an empty position beyond it.</li><li>If a capture is mandatory, the player must make a capture.</li><li>After the first capture, another available capture may be continued, but the player can choose to finish the turn.</li><li>An eaten token leaves the board and is placed on the captor's side.</li></ul></div>
-  <div class="guide-card"><h3>👑 KINGS</h3><ul><li>A King can move along the real board lines in any allowed direction.</li><li>A King may resist eating a normal token, but it cannot resist a legal capture of another King.</li><li>Choose the King long-distance rule in Settings: <b>After 1 King capture OR 3 King moves</b>, or <b>Immediately on crowning</b>.</li><li>Long-distance movement still follows the actual board lines; it is not teleportation.</li></ul></div>
+  <div class="guide-card"><h3>👑 KINGS</h3><ul><li>A King can move along the real board lines in any allowed direction.</li><li>A King may resist eating a normal token, but it cannot resist a legal capture of another King.</li><li>Choose the King long-distance rule in Settings: <b>After 1 King capture OR 3 King moves</b>, or <b>Immediately on crowning</b>.</li><li>Until a King has earned its energy, it captures like a normal token: only an opponent right next to it. Long-distance captures and moves unlock after its first capture as a King, or after 3 King moves.</li><li>Long-distance movement still follows the actual board lines; it is not teleportation.</li><li><b>Draw:</b> if each player is left with exactly one King and nobody captures within 10 moves each, the game ends in a draw.</li></ul></div>
   <div class="guide-card"><h3>🤖 COMPUTER MODE</h3><p>In Human vs Computer, <b>PLAYER A = HUMAN</b> and <b>PLAYER B = COMPUTER</b>. The board and turn indicator show the role clearly.</p></div>
   <div class="guide-card"><h3>⚙️ MOVEMENT SPEED</h3><p>Token movement and capture animation speed can be changed at any time in Settings.</p></div>
   <div class="guide-card"><h3>⚠️ IMPORTANT</h3><p>If a player refuses a mandatory capture, the applicable token is forfeited according to the game rules.</p></div>
@@ -331,6 +335,8 @@ let mandatoryCaptures = [];   // all legal captures for currentPlayer at turn st
 let chainTokenId = null;      // set while a capture chain is in progress
 let lastMovedTo = null;       // where the moving token ended up this turn (for end-of-turn promotion)
 let gameOver = false;
+let drawCountdown = null;     // turns left before a draw; only runs while each side has exactly one King
+const DRAW_LIMIT_TURNS = 20;  // 10 moves each
 let busy = false;             // true while an animation sequence blocks input
 let doomedUid = null;         // token about to be forfeited (drawn in red first)
 let nextUid = 1;
@@ -356,6 +362,7 @@ function resetGame() {
   pendingCapturedA = 0; pendingCapturedB = 0;
   currentPlayer = 'A';
   gameOver = false;
+  drawCountdown = null;
   gameId++;
   lastAiSteps = [];
   document.getElementById('game-over').classList.remove('show','victory','defeat');
@@ -435,8 +442,9 @@ function getNormalCaptureMoves(id, token) {
 }
 
 // King capture (§24-27). Walks each straight line from the King along real board edges:
-//  - Baseline King: up to 2 empty gaps before the opponent, lands on the single square just beyond.
-//  - King that has already captured as a King (hasCaptured): Super-Jump — any number of empty gaps,
+//  - King without energy: behaves like a normal token for captures — the opponent must be directly
+//    adjacent and the King lands on the single square just beyond it (it may also eat Kings).
+//  - King with energy (captured once as a King, or made 3 King moves): Super-Jump — any number of empty gaps,
 //    and may land on any empty square beyond the opponent along that line.
 // Can eat Kings and normal tokens. Never teleports; every step must follow a real edge.
 function getKingCaptureMoves(id, token) {
@@ -459,7 +467,7 @@ function getKingCaptureMoves(id, token) {
       const occ = board[nextId];
       if (occ === null) {
         gaps++;
-        if (!kingHasEnergy(token) && gaps > 2) break;
+        if (!kingHasEnergy(token)) break; // no energy yet: opponent must be directly adjacent, like a normal token
         prevId = nextId;
         continue;
       }
@@ -505,11 +513,16 @@ function getMandatoryCaptures(player) {
 }
 
 const STATS_KEY = 'ekyeso.stats';
-function defaultStats(){ return { hvh:{games:0,aWins:0,bWins:0}, ai:{games:0,wins:0,losses:0,levels:{easy:{wins:0,losses:0},moderate:{wins:0,losses:0},hard:{wins:0,losses:0}}}, history:[] }; }
+function defaultStats(){ return { hvh:{games:0,aWins:0,bWins:0,draws:0}, ai:{games:0,wins:0,losses:0,draws:0,levels:{easy:{wins:0,losses:0},moderate:{wins:0,losses:0},hard:{wins:0,losses:0}}}, history:[] }; }
 function getStats(){ try { const x=JSON.parse(localStorage.getItem(STATS_KEY)||'null'); return x && x.hvh && x.ai ? x : defaultStats(); } catch(e){ return defaultStats(); } }
 function saveStats(v){ try{ localStorage.setItem(STATS_KEY,JSON.stringify(v)); }catch(e){} }
 function recordResult(winner){
   const st=getStats();
+  if(winner==='DRAW'){
+    if(mode==='two'){ st.hvh.games++; st.hvh.draws=(st.hvh.draws||0)+1; st.history.unshift({mode:'hvh',winner:'DRAW',when:Date.now()}); }
+    else { st.ai.games++; st.ai.draws=(st.ai.draws||0)+1; st.history.unshift({mode:'ai',winner:'DRAW',level:aiLevel,when:Date.now()}); }
+    st.history=st.history.slice(0,20); saveStats(st); return;
+  }
   if(mode==='two'){ st.hvh.games++; if(winner==='A') st.hvh.aWins++; else st.hvh.bWins++; st.history.unshift({mode:'hvh',winner,when:Date.now()}); }
   else { const humanWon=winner!==aiPlayer; st.ai.games++; humanWon?st.ai.wins++:st.ai.losses++; const lv=st.ai.levels[aiLevel]||st.ai.levels.moderate; humanWon?lv.wins++:lv.losses++; st.history.unshift({mode:'ai',winner:humanWon?'YOU':'COMPUTER',level:aiLevel,when:Date.now()}); }
   st.history=st.history.slice(0,20); saveStats(st);
@@ -521,7 +534,7 @@ function closeGuide(){ document.getElementById('guide-screen').classList.remove(
 function closeStats(){ document.getElementById('stats-screen').classList.remove('show'); }
 function openAiMenu(){ document.querySelector('#menu-card'); document.getElementById('ai-menu').style.display='block'; document.querySelector('.menu-card').style.display='none'; }
 function closeAiMenu(){ document.getElementById('ai-menu').style.display='none'; document.querySelector('.menu-card').style.display='flex'; }
-function updateStatsUI(){ const s=getStats(); document.getElementById('hvh-games').textContent=s.hvh.games; document.getElementById('hvh-a-wins').textContent=s.hvh.aWins; document.getElementById('hvh-b-wins').textContent=s.hvh.bWins; document.getElementById('ai-games').textContent=s.ai.games; document.getElementById('ai-wins').textContent=s.ai.wins; document.getElementById('ai-losses').textContent=s.ai.losses; ['easy','moderate','hard'].forEach(k=>document.getElementById(k+'-rec').textContent=`${s.ai.levels[k].wins} W / ${s.ai.levels[k].losses} L`); const list=document.getElementById('history-list'); list.innerHTML=s.history.length?s.history.map(h=>{const d=new Date(h.when); const label=h.mode==='hvh'?`👥 ${h.winner} won`:`🤖 ${h.winner} · ${levelLabel(h.level)}`; return `<div class="history-row"><span>${label}</span><span>${d.toLocaleDateString()}</span></div>`}).join(''):'<div style="opacity:.45;text-align:center;font-size:11px">No completed games yet.</div>'; }
+function updateStatsUI(){ const s=getStats(); document.getElementById('hvh-games').textContent=s.hvh.games; document.getElementById('hvh-a-wins').textContent=s.hvh.aWins; document.getElementById('hvh-b-wins').textContent=s.hvh.bWins; document.getElementById('hvh-draws').textContent=s.hvh.draws||0; document.getElementById('ai-draws').textContent=s.ai.draws||0; document.getElementById('ai-games').textContent=s.ai.games; document.getElementById('ai-wins').textContent=s.ai.wins; document.getElementById('ai-losses').textContent=s.ai.losses; ['easy','moderate','hard'].forEach(k=>document.getElementById(k+'-rec').textContent=`${s.ai.levels[k].wins} W / ${s.ai.levels[k].losses} L`); const list=document.getElementById('history-list'); list.innerHTML=s.history.length?s.history.map(h=>{const d=new Date(h.when); const label=h.winner==='DRAW'?(h.mode==='hvh'?'🤝 Draw':`🤝 Draw · ${levelLabel(h.level)}`):h.mode==='hvh'?`👥 ${h.winner} won`:`🤖 ${h.winner} · ${levelLabel(h.level)}`; return `<div class="history-row"><span>${label}</span><span>${d.toLocaleDateString()}</span></div>`}).join(''):'<div style="opacity:.45;text-align:center;font-size:11px">No completed games yet.</div>'; }
 
 function showVictoryConfetti() {
   const burst = document.getElementById('result-burst');
@@ -536,6 +549,48 @@ function showVictoryConfetti() {
     d.style.setProperty('--rot', `${Math.random()*500-250}deg`); burst.appendChild(d);
   }
 }
+// ---------- DRAW RULE: one King each ----------
+// When each player has exactly one token left and both are Kings, the game is on a countdown.
+// If nobody captures within DRAW_LIMIT_TURNS turns (10 moves each), the game is a draw.
+// Any capture ends the game (someone has no tokens left), so the counter never needs to restart.
+function kingsOnlyEndgame() {
+  const toks = Object.values(board).filter(t => t);
+  if (toks.length !== 2) return false;
+  const a = toks.find(t => t.player === 'A'), b = toks.find(t => t.player === 'B');
+  return !!(a && b && a.type === 'king' && b.type === 'king');
+}
+function updateDrawCountdown() {
+  if (!kingsOnlyEndgame()) { drawCountdown = null; return false; }
+  if (drawCountdown === null) { drawCountdown = DRAW_LIMIT_TURNS; return false; } // countdown starts now
+  drawCountdown--;
+  return drawCountdown <= 0;
+}
+function declareDraw() {
+  gameOver = true;
+  recordResult('DRAW');
+  const overlay = document.getElementById('game-over');
+  overlay.classList.remove('victory', 'defeat');
+  document.getElementById('result-icon').textContent = '🤝';
+  document.getElementById('result-kicker').textContent = 'DRAW';
+  document.getElementById('winner-text').textContent = "IT'S A DRAW";
+  document.getElementById('result-message').textContent = `Each side was left with one King and no one captured in ${DRAW_LIMIT_TURNS / 2} moves each.`;
+  document.getElementById('result-burst').innerHTML = '';
+  const st = getStats();
+  const rec = document.getElementById('result-record');
+  if (mode === 'ai') rec.textContent = `Your record: ${st.ai.wins} wins • ${st.ai.losses} losses • ${st.ai.draws || 0} draws`;
+  else rec.textContent = `Human vs Human: ${st.hvh.aWins} Player A wins • ${st.hvh.bWins} Player B wins • ${st.hvh.draws || 0} draws`;
+  sfx('win');
+  overlay.classList.add('show');
+}
+function renderDrawNote() {
+  const n = document.getElementById('draw-note');
+  if (!n) return;
+  if (drawCountdown === null || gameOver) { n.className = ''; n.textContent = ''; return; }
+  const left = Math.max(1, Math.ceil(drawCountdown / 2));
+  n.textContent = `🤝 Draw in ${left} move${left === 1 ? '' : 's'} each if no one captures`;
+  n.className = 'show' + (drawCountdown <= 6 ? ' urgent' : '');
+}
+
 function checkWinner() {
   const countA = Object.values(board).filter(t => t && t.player === 'A').length;
   const countB = Object.values(board).filter(t => t && t.player === 'B').length;
@@ -609,6 +664,7 @@ function endTurn() {
   captureMap = {};
   currentPlayer = currentPlayer === 'A' ? 'B' : 'A';
   checkWinner();
+  if (!gameOver && updateDrawCountdown()) declareDraw();
   saveGame();
   if (!gameOver) startTurn(); else render();
 }
@@ -1108,6 +1164,7 @@ function render() {
 
   syncTokens();
 
+  renderDrawNote();
   const indicator = document.getElementById('turn-indicator');
   const role = mode === 'ai' ? (currentPlayer === aiPlayer ? 'COMPUTER' : 'HUMAN') : `PLAYER ${currentPlayer}`;
   indicator.textContent = `${COLOR_EMOJI[tokenStyle[currentPlayer].color]} ${role} · PLAYER ${currentPlayer}'s TURN`;
@@ -1351,7 +1408,7 @@ function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       board: serializeBoard(), currentPlayer, capturedByA, capturedByB,
-      mode, aiPlayer, aiLevel, nextUid
+      mode, aiPlayer, aiLevel, nextUid, drawCountdown
     }));
   } catch (e) {}
 }
@@ -1369,6 +1426,8 @@ function resumeGame() {
   currentPlayer = v.currentPlayer; capturedByA = v.capturedByA; capturedByB = v.capturedByB;
   mode = v.mode; aiPlayer = v.aiPlayer; aiLevel = v.aiLevel; nextUid = v.nextUid;
   gameOver = false; gameId++;
+  drawCountdown = (typeof v.drawCountdown === 'number') ? v.drawCountdown : null;
+  if (drawCountdown === null && kingsOnlyEndgame()) drawCountdown = DRAW_LIMIT_TURNS;
   document.getElementById('menu').classList.remove('show');
   document.getElementById('game-over').classList.remove('show');
   startTurn();
