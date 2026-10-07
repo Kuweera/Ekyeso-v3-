@@ -84,6 +84,16 @@
   #action-bar { display: flex; justify-content: center; gap: 10px; padding: 4px 0 10px; min-height: 46px; flex-shrink: 0; }
   #action-bar button { background: #e8b96a; color: #1a1410; border: none; border-radius: 10px; padding: 10px 22px; font-size: 15px; font-weight: 800; }
 
+  #prompt-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); display: none; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
+  #prompt-overlay.show { display: flex; }
+  .prompt-card { background: #241a11; border: 1px solid #765535; border-radius: 16px; padding: 20px 18px; max-width: 320px; width: 100%; text-align: center; box-shadow: 0 14px 40px rgba(0,0,0,.6); }
+  .prompt-card h3 { margin: 0 0 8px; color: #e8b96a; font-size: 18px; letter-spacing: 1px; }
+  .prompt-card p { margin: 0 0 16px; font-size: 13px; opacity: .85; line-height: 1.45; }
+  .prompt-actions { display: flex; gap: 10px; }
+  .prompt-actions button { flex: 1; border-radius: 10px; padding: 11px 8px; font-size: 13px; font-weight: 800; border: 1px solid #765535; background: #2a1e14; color: #f0e6d8; }
+  .prompt-actions button#prompt-ok { background: #e8b96a; color: #1a1410; border: none; }
+  #toast { position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%); background: rgba(20,14,9,.95); color: #f0e6d8; border: 1px solid #765535; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 700; z-index: 70; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #toast.show { opacity: 1; }
   #game-over { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 10; }
   #game-over.show { display: flex; }
   #game-over h2 { color: #e8b96a; font-size: 30px; margin: 0; text-align:center; letter-spacing:2px; text-shadow:0 3px 18px rgba(232,185,106,.25); }
@@ -254,6 +264,9 @@
   <div class="tsec" style="text-align:center"><div class="tlabel">📩 DEVELOPER</div><div style="font-size:11px;line-height:1.6;opacity:.8">Email: <b>kuweeraa@gmail.com</b><br>WhatsApp: <b>@arnestk</b></div></div>
   <button class="ok" onclick="closeTokens()">✔ OK</button>
 </div>
+
+<div id="prompt-overlay"><div class="prompt-card"><h3 id="prompt-title"></h3><p id="prompt-text"></p><div class="prompt-actions"><button id="prompt-ok"></button><button id="prompt-alt"></button></div></div></div>
+<div id="toast"></div>
 
 <div id="game-over">
   <div id="result-burst" aria-hidden="true"></div>
@@ -1192,6 +1205,7 @@ function render() {
 // getMandatoryCaptures / getCaptureMovesForToken / promoteIfNeeded used by human play,
 // on copies of the board. Difficulty only changes depth, evaluation weights and randomness.
 const TIMEOUT = { timeout: true };
+const AI_NODE_LIMIT = 60000;   // hard ceiling on search size per depth, so a slow phone is never overloaded
 const AI_CONFIG = {
   easy:     { depth: 1, timeMs: 0,    randomLegal: 0.30, topN: 0, topPickChance: 0,   w: { normal: 100, king: 200, adv: 0, center: 0 } },
   moderate: { depth: 3, timeMs: 1000, randomLegal: 0,    topN: 3, topPickChance: 0.10, w: { normal: 100, king: 300, adv: 4, center: 3 } },
@@ -1284,7 +1298,8 @@ function orderTurns(turns) { turns.sort((x, y) => y.captured - x.captured); }
 
 // Negamax with alpha-beta. Scores are from the point of view of `player` (to move).
 function search(b, player, depth, alpha, beta, cfg, ctx) {
-  if (ctx.check && Date.now() > ctx.deadline) throw TIMEOUT;
+  ctx.nodes = (ctx.nodes || 0) + 1;
+  if (ctx.check && (ctx.nodes > AI_NODE_LIMIT || Date.now() > ctx.deadline)) throw TIMEOUT;
   const opp = player === 'A' ? 'B' : 'A';
   const cnt = countTokens(b);
   if (cnt[player] === 0) return -10000 - depth;
@@ -1364,8 +1379,12 @@ function aiTakeTurn(gid) {
   busy = true;
   const steps = choice.steps;
   let i = 0;
+  const finishSafely = () => { if (gid !== gameId) return; try { board = choice.board; } catch (e) {} lastMovedTo = null; busy = false; try { endTurn(); } catch (e2) { render(); } };
   const next = () => {
     if (gid !== gameId) return;
+    try { nextStep(); } catch (err) { finishSafely(); }
+  };
+  const nextStep = () => {
     if (i >= steps.length) {
       board = choice.board;          // same tokens (same uids), including any promotion
       lastMovedTo = null;
@@ -1454,6 +1473,51 @@ board = newBoard();
 initBoard();
 startTurn();
 updateResumeBtn();
+
+// ----- Prompts, toast, back-button guard, and resume-on-launch -----
+function showPrompt(title, text, okLabel, okFn, altLabel, altFn) {
+  document.getElementById('prompt-title').textContent = title;
+  document.getElementById('prompt-text').textContent = text;
+  const ok = document.getElementById('prompt-ok'), alt = document.getElementById('prompt-alt');
+  ok.textContent = okLabel; alt.textContent = altLabel;
+  ok.onclick = okFn; alt.onclick = altFn;
+  document.getElementById('prompt-overlay').classList.add('show');
+}
+function hidePrompt() { document.getElementById('prompt-overlay').classList.remove('show'); }
+function promptOpen() { return document.getElementById('prompt-overlay').classList.contains('show'); }
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+function offerResumeOnLaunch() {
+  if (!hasSavedGame()) return;
+  showPrompt('Unfinished game', 'You have a game in progress. Continue where you stopped?',
+    '▶ RESUME', () => { hidePrompt(); resumeGame(); }, '☰ MENU', hidePrompt);
+}
+// Phone back button / edge swipe: never drop the player out of a game by accident.
+const isShown = id => document.getElementById(id).classList.contains('show');
+let exitTimer = null;
+function pushGuard() { try { history.pushState({ ek: 1 }, ''); } catch (e) {} }
+pushGuard();
+window.addEventListener('popstate', () => {
+  if (promptOpen()) { hidePrompt(); pushGuard(); return; }
+  if (isShown('tokens-screen')) { closeTokens(); pushGuard(); return; }
+  if (isShown('stats-screen')) { closeStats(); pushGuard(); return; }
+  if (isShown('guide-screen')) { closeGuide(); pushGuard(); return; }
+  if (document.getElementById('ai-menu').style.display === 'block') { closeAiMenu(); pushGuard(); return; }
+  if (isShown('game-over')) { showMenu(); pushGuard(); return; }
+  if (isShown('menu')) {
+    // Menu: first back press warns, a second press within 2 seconds leaves the app.
+    showToast('Press back again to exit');
+    clearTimeout(exitTimer); exitTimer = setTimeout(pushGuard, 2000);
+    return;
+  }
+  pushGuard();
+  showPrompt('Leave this game?', 'Your game is saved automatically, so you can resume it later.',
+    'KEEP PLAYING', hidePrompt, '☰ MENU', () => { hidePrompt(); showMenu(); });
+});
+offerResumeOnLaunch();
 </script>
 </body>
 </html>
